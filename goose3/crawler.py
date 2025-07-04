@@ -204,6 +204,9 @@ class Crawler:
         else:
             doc = [self.cleaner.clean(deepcopy(x)) for x in doc]
 
+        print("="*5+"After Cleaner"+"="*5)
+        print(etree.tostring(doc[0]).decode("utf-8"))
+
         # big stuff
         self.article._top_node = self.extractor.calculate_best_node(doc)
 
@@ -215,6 +218,9 @@ class Crawler:
         else:
             # set the doc member to the discovered article node.
             self.article._doc = doc
+
+        print("="*5+"After Calculate Best Node"+"="*5)
+        print(etree.tostring(doc[0]).decode("utf-8"))
 
         # if we have a top node
         # let's process it
@@ -235,6 +241,9 @@ class Crawler:
             # post cleanup
             self.article._top_node_raw_html = etree.tostring(self.article.top_node).decode("utf-8")
             self.article._top_node = self.extractor.post_cleanup()
+
+            print("="*5+"After Post Cleanup"+"="*5)
+            print(etree.tostring(self.article.top_node).decode("utf-8"))
 
             # clean_text
             self.article._cleaned_text = self.formatter.get_formatted_text()

@@ -30,7 +30,8 @@ from goose3.utils.constants import CAMEL_CASE_DEPRICATION
 from goose3.utils.encoding import DjangoUnicodeDecodeError, smart_str, smart_unicode
 
 SPACE_SYMBOLS = re.compile(r"[\s\xa0\t]")
-TABSSPACE = re.compile(r"[\s\t]+")
+# TABSSPACE = re.compile(r"[\s\t]+")
+TABSSPACE = re.compile(r"[ \t]+")
 
 
 def get_encodings_from_content(content):
@@ -52,7 +53,7 @@ def inner_trim(value):
     if isinstance(value, str):
         # remove tab and white space
         value = re.sub(TABSSPACE, " ", value)
-        value = "".join(value.splitlines())
+        value = "\n".join(value.splitlines())
         return value.strip()
     return ""
 

@@ -337,6 +337,15 @@ class ContentExtractor(BaseExtractor):
         node = self.add_siblings(target_node)
         for elm in self.parser.get_children(node):
             e_tag = self.parser.get_tag(elm)
+
+            if e_tag == "text" and self.parser.get_attribute(elm, "preserve") == "true":
+                print("="*5+"text"+"="*5)
+                print(self.parser.get_attribute(elm, "source"))
+                continue
+
+            if any(self.parser.get_attribute(child, "preserve") == "true" for child in self.parser.get_children(elm)):
+                continue
+
             if e_tag not in parse_tags:
                 if (
                     self.is_highlink_density(elm)
