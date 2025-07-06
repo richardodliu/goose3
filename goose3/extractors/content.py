@@ -98,6 +98,8 @@ class ContentExtractor(BaseExtractor):
             high_link_density = self.is_highlink_density(node)
             if word_stats.get_stopword_count() > 2 and not high_link_density:
                 nodes_with_text.append(node)
+            elif node.tag == "text":
+                nodes_with_text.append(node)
 
         nodes_number = len(nodes_with_text)
         negative_scoring = 0
@@ -118,6 +120,10 @@ class ContentExtractor(BaseExtractor):
                     negscore = abs(boost_score) + negative_scoring
                     if negscore > 40:
                         boost_score = float(5)
+            
+            if node.tag == "text" and self.parser.get_attribute(node, "preserve") == "true":
+                if boost_score == 0:
+                    boost_score = float(1)
 
             text_node = self.parser.get_text(node)
             word_stats = self.stopwords_class(language=self.get_language()).get_stopword_count(text_node)
@@ -299,7 +305,9 @@ class ContentExtractor(BaseExtractor):
         nodes_to_check = []
 
         for doc in docs:
-            for tag in ["p", "pre", "td"]:
+            # for tag in ["p", "pre", "td"]:
+            # add text tag to the list
+            for tag in ["p", "pre", "td", "text"]:
                 items = self.parser.get_elements_by_tag(doc, tag=tag)
                 nodes_to_check += items
         return nodes_to_check

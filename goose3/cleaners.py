@@ -65,6 +65,10 @@ class DocumentCleaner:
 
         if self.config.preserve_code_elements:
             doc_to_clean = self.convert_code_node(doc_to_clean)
+
+        if self.config.preserve_img_elements:
+            doc_to_clean = self.convert_img_node(doc_to_clean)
+        
         doc_to_clean = self.clean_body_classes(doc_to_clean)
         doc_to_clean = self.clean_article_tags(doc_to_clean)
         doc_to_clean = self.clean_tags(doc_to_clean, ["em", "small"])
@@ -386,7 +390,8 @@ class DocumentCleaner:
             title = self.parser.get_attribute(img_elem, "title")
             if src:
                 text_element = self.parser.create_element("text")
-                text_element.text = f'<img src="{src}" alt="{alt}" title="{title}" />'
+                text_element.text = f'<img alt="{alt}" title="{title}" src="{src}" />'
+                text_element.tail = img_elem.tail
                 self.parser.set_attribute(text_element, attr="source", value="img")
                 self.parser.set_attribute(text_element, attr="preserve", value="true")
                 parent = self.parser.get_parent(img_elem)                
