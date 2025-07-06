@@ -21,6 +21,7 @@ limitations under the License.
 """
 import html
 
+from lxml import etree
 from goose3.text import inner_trim
 
 
@@ -59,12 +60,27 @@ class OutputFormatter:
     def get_formatted_text(self):
         self.top_node = self.article.top_node
         self.remove_negativescores_nodes()
+        print("="*5+"After remove_negativescores_nodes"+"="*5)
+        print(etree.tostring(self.top_node).decode("utf-8"))
         self.links_to_text()
+        print("="*5+"After links_to_text"+"="*5)
+        print(etree.tostring(self.top_node).decode("utf-8"))
         self.add_newline_to_br()
+        print("="*5+"After add_newline_to_br"+"="*5)
+        print(etree.tostring(self.top_node).decode("utf-8"))
         self.replace_with_text()
+        print("="*5+"After replace_with_text"+"="*5)
+        print(etree.tostring(self.top_node).decode("utf-8"))
         self.remove_fewwords_paragraphs()
+        print("="*5+"After remove_fewwords_paragraphs"+"="*5)
+        print(etree.tostring(self.top_node).decode("utf-8"))
         self.make_list_elms_pretty()
-        return self.convert_to_text()
+        print("="*5+"After make_list_elms_pretty"+"="*5)
+        print(etree.tostring(self.top_node).decode("utf-8"))
+        text = self.convert_to_text()
+        print("="*5+"After convert_to_text"+"="*5)
+        print(text)
+        return text
 
     def convert_to_text(self):
         txts = []
@@ -98,7 +114,10 @@ class OutputFormatter:
     def make_list_elms_pretty(self):
         """make any list element read like a list"""
         for elm in self.parser.get_elements_by_tag(self.top_node, tag="li"):
-            elm.text = rf"• {elm.text}"
+            if elm.text is not None:
+                elm.text = rf"• {elm.text}"
+            else:
+                elm.text = "• "
 
     def remove_negativescores_nodes(self):
         """if there are elements inside our top node that have a negative gravity score, let's give em the boot"""
@@ -119,11 +138,25 @@ class OutputFormatter:
             self.parser.strip_tags(self.get_top_node(), "sup")
 
     def remove_fewwords_paragraphs(self):
-        """remove paragraphs that have less than x number of words, would indicate that it's some sort of link"""
+        """
+        remove paragraphs that have less than x number of words,
+        would indicate that it's some sort of link
+        """
         all_nodes = self.parser.get_elements_by_tags(self.get_top_node(), ["*"])
         all_nodes.reverse()
         for elm in all_nodes:
             tag = self.parser.get_tag(elm)
+
+            # Skip if current element or any of its children has preserve="true"
+            if (
+                self.parser.get_attribute(elm, "preserve") == "true"
+                or any(
+                    self.parser.get_attribute(child, "preserve") == "true"
+                    for child in self.parser.get_children(elm)
+                )
+            ):
+                continue
+
             text = self.parser.get_text(elm)
             stop_words = self.stopwords_class(language=self.get_language()).get_stopword_count(text)
             if (

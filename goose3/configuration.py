@@ -196,6 +196,13 @@ class Configuration:
         self._parse_headers = True
         self._keep_footnotes = True
 
+        # element preservation configuration
+        self._preserve_img_elements = True
+        self._preserve_table_elements = True
+        self._preserve_code_elements = True
+        self._preserve_math_elements = True
+
+
     @property
     def known_context_patterns(self) -> list:
         """list: The context patterns to search to find the likely article content
@@ -607,3 +614,55 @@ class Configuration:
         Returns:
             Parser: The parser to use"""
         return AVAILABLE_PARSERS[self.parser_class]
+
+    @property
+    def preserve_img_elements(self) -> bool:
+        """bool: Preserve <img> elements with src, alt, and title attributes
+        
+        Note:
+            Defaults to `True`"""
+        return self._preserve_img_elements
+
+    @preserve_img_elements.setter
+    def preserve_img_elements(self, val: bool):
+        """set the preserve_img_elements property"""
+        self._preserve_img_elements = bool(val)
+
+    @property
+    def preserve_table_elements(self) -> bool:
+        """bool: Preserve <table> elements as HTML
+        
+        Note:
+            Defaults to `True`"""
+        return self._preserve_table_elements
+
+    @preserve_table_elements.setter
+    def preserve_table_elements(self, val: bool):
+        """set the preserve_table_elements property"""
+        self._preserve_table_elements = bool(val)
+
+    @property
+    def preserve_code_elements(self) -> bool:
+        """bool: Preserve <code> elements as HTML
+        
+        Note:
+            Defaults to `True`"""
+        return self._preserve_code_elements
+
+    @preserve_code_elements.setter
+    def preserve_code_elements(self, val: bool):
+        """set the preserve_code_elements property"""
+        self._preserve_code_elements = bool(val)
+
+    @property
+    def preserve_math_elements(self) -> bool:
+        """bool: Preserve mathematical elements (LaTeX, MathML, script math/tex)
+        
+        Note:
+            Defaults to `True`"""
+        return self._preserve_math_elements
+
+    @preserve_math_elements.setter
+    def preserve_math_elements(self, val: bool):
+        """set the preserve_math_elements property"""
+        self._preserve_math_elements = bool(val)

@@ -20,7 +20,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from goose3.utils import ReplaceSequence
-
+import re
 
 class DocumentCleaner:
     def __init__(self, config, article):
@@ -62,6 +62,9 @@ class DocumentCleaner:
         self.tablines_replacements = ReplaceSequence().create("\n", "\n\n").append("\t").append("^\\s+$")
 
     def clean(self, doc_to_clean):
+
+        if self.config.preserve_code_elements:
+            doc_to_clean = self.convert_code_node(doc_to_clean)
         doc_to_clean = self.clean_body_classes(doc_to_clean)
         doc_to_clean = self.clean_article_tags(doc_to_clean)
         doc_to_clean = self.clean_tags(doc_to_clean, ["em", "small"])
@@ -251,6 +254,145 @@ class DocumentCleaner:
 
                 else_divs += 1
 
+        return doc
+
+    def convert_math_node(self, doc):
+        r"""
+        transform latex to mathml
+        
+        support:
+        1. inline latex: \( ... \) or $...$ -> <math display="inline">...</math>
+        2. block latex: \[ ... \] or $$...$$ -> <math display="block">...</math>
+        3. script tag: <script type="math/tex">...</script> -> <math display="script">...</math>
+        4. native mathml: <math>...</math> -> <math display="mathml">...</math>
+        """
+
+        # process text nodes for latex expressions recursively
+        self._process_element_text_recursively(doc)
+
+        # process script tags with math/tex - convert to p nodes with original content
+        scripts = self.parser.get_elements_by_tag(doc, tag="script")
+        for script in scripts:
+            script_type = self.parser.get_attribute(script, "type")
+            if script_type and "math/tex" in script_type:
+                script_content = self.parser.get_text(script)
+                if script_content:
+                    # create p element with original math content
+                    text_element = self.parser.create_element("text")
+                    self.parser.set_attribute(text_element, attr="preserve", value="true")
+                    self.parser.set_attribute(text_element, attr="source", value="math")
+                    text_element.text = f'<math>{script_content}</math>'
+                    # replace script with p element
+                    parent = self.parser.get_parent(script)
+                    if parent is not None:
+                        parent.replace(script, text_element)
+
+        # process existing math tags
+        math_elements = self.parser.get_elements_by_tag(doc, tag="math")
+        for math_elem in math_elements:
+            math_content = self.parser.inner_html(math_elem)
+            if math_content:
+                text_element = self.parser.create_element("text")
+                self.parser.set_attribute(text_element, attr="preserve", value="true")
+                self.parser.set_attribute(text_element, attr="source", value="math")
+                text_element.text = f'<math>{math_content}</math>'
+                parent = self.parser.get_parent(math_elem)
+                if parent is not None:
+                    parent.replace(math_elem, text_element)
+
+        return doc
+
+    def _process_element_text_recursively(self, element):
+        """Process text content in all elements using lxml's iter() method"""
+        # Use lxml's iter() to traverse all elements in the tree
+        for elem in element.iter():
+            # Process element's text content
+            if elem.text:
+                new_text = self._convert_latex_in_text(elem.text)
+                if new_text != elem.text:
+                    elem.text = new_text
+
+            # Process element's tail content
+            if elem.tail:
+                new_tail = self._convert_latex_in_text(elem.tail)
+                if new_tail != elem.tail:
+                    elem.tail = new_tail
+
+
+    def _convert_latex_in_text(self, text):
+        """Convert LaTeX patterns in text to math tags"""
+
+        # block latex \[ ... \]
+        text = re.sub(r'\\\[(.*?)\\\]', r'<math>\1</math>', text, flags=re.DOTALL)
+
+        # block latex $$...$$
+        text = re.sub(r'\$\$(.*?)\$\$', r'<math>\1</math>', text, flags=re.DOTALL)
+
+        # inline latex \( ... \)
+        text = re.sub(r'\\\((.*?)\\\)', r'<math>\1</math>', text, flags=re.DOTALL)
+
+        # inline latex $...$ (avoid double $)
+        text = re.sub(r'(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)', r'<math>\1</math>', text)
+
+        return text
+
+    def convert_code_node(self, doc):
+        """
+        Convert code tags to p tags with original content
+        """
+        code_elements = self.parser.get_elements_by_tag(doc, tag="code")
+        for code_elem in code_elements:
+            code_content = self.parser.inner_html(code_elem)
+            if code_content:
+                text_element = self.parser.create_element("text")
+                text_element.text = f'<code>{code_content}</code>'
+                text_element.tail = code_elem.tail
+                self.parser.set_attribute(text_element, attr="source", value="code")
+                self.parser.set_attribute(text_element, attr="preserve", value="true")
+                self.parser.set_attribute(text_element, attr="gravityScore", value="1")
+                parent = self.parser.get_parent(code_elem)                
+                if parent is not None:
+                    parent.replace(code_elem, text_element)
+
+        return doc
+
+    def convert_table_node(self, doc):
+        """
+        Convert table tags to p tags with original content
+        """
+        table_elements = self.parser.get_elements_by_tag(doc, tag="table")
+
+        for table_elem in table_elements:
+            table_content = self.parser.inner_html(table_elem)
+            if table_content:
+                text_element = self.parser.create_element("text")
+                text_element.text = f'<table>{table_content}</table>'
+                self.parser.set_attribute(text_element, attr="source", value="table")
+                self.parser.set_attribute(text_element, attr="preserve", value="true")
+                parent = self.parser.get_parent(table_elem)                
+                if parent is not None:
+                    parent.replace(table_elem, text_element)
+
+        return doc
+
+    def convert_img_node(self, doc):
+        """
+        Convert img tags to p tags with original content
+        """
+        img_elements = self.parser.get_elements_by_tag(doc, tag="img")
+        for img_elem in img_elements:
+            src = self.parser.get_attribute(img_elem, "src")
+            alt = self.parser.get_attribute(img_elem, "alt")
+            title = self.parser.get_attribute(img_elem, "title")
+            if src:
+                text_element = self.parser.create_element("text")
+                text_element.text = f'<img src="{src}" alt="{alt}" title="{title}" />'
+                self.parser.set_attribute(text_element, attr="source", value="img")
+                self.parser.set_attribute(text_element, attr="preserve", value="true")
+                parent = self.parser.get_parent(img_elem)                
+                if parent is not None:
+                    parent.replace(img_elem, text_element)
+        
         return doc
 
 

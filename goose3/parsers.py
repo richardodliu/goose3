@@ -240,6 +240,15 @@ class Parser:
             tmp.tail = None
         return cls.node_to_string(tmp)
 
+    @classmethod
+    def inner_html(cls, node):
+        result = node.text or ''
+        for child in node:
+            result += cls.node_to_string(child)
+        # if node.tail:
+        #     result += node.tail
+        return result
+
     # Aliases to previous names
     @classmethod
     @deprecated(f"Deprecated and to be removed in v{CAMEL_CASE_DEPRICATION}; use node_to_string instead")

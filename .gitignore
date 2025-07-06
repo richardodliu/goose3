@@ -106,3 +106,6 @@ ENV/
 # JetBrains
 .idea
 .vscode/settings.json
+
+# Git bash
+git.sh
