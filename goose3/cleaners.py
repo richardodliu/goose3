@@ -193,8 +193,10 @@ class DocumentCleaner:
                 replacement_text = []
                 nodes_to_return.append(kid)
             # node is a text node
-            # elif self.parser.is_text_node(kid):
-            elif self.parser.is_text_node(kid) and self.parser.get_attribute(kid, "preserve") != "true":
+            elif self.parser.is_text_node(kid):
+                if self.parser.get_attribute(kid, "preserve") == "true":
+                    nodes_to_return.append(kid)
+                    continue
                 kid_text_node = kid
                 kid_text = self.parser.get_text(kid)
                 replace_text = self.tablines_replacements.replace_all(kid_text)
