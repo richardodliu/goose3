@@ -20,6 +20,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from goose3.utils import ReplaceSequence
+from lxml import etree
 import re
 
 class DocumentCleaner:
@@ -69,6 +70,8 @@ class DocumentCleaner:
         if self.config.preserve_img_elements:
             doc_to_clean = self.convert_img_node(doc_to_clean)
         
+        print("="*5+"after convert code and img"+"="*5)
+        print(etree.tostring(doc_to_clean).decode("utf-8"))
         doc_to_clean = self.clean_body_classes(doc_to_clean)
         doc_to_clean = self.clean_article_tags(doc_to_clean)
         doc_to_clean = self.clean_tags(doc_to_clean, ["em", "small"])
@@ -82,8 +85,12 @@ class DocumentCleaner:
         doc_to_clean = self.remove_nodes_regex(doc_to_clean, self.facebook_braodcasting_re)
         doc_to_clean = self.remove_nodes_regex(doc_to_clean, self.twitter_re)
         doc_to_clean = self.clean_para_spans(doc_to_clean)
+        print("="*5+"after clean para spans"+"="*5)
+        print(etree.tostring(doc_to_clean).decode("utf-8"))
         doc_to_clean = self.div_to_para(doc_to_clean, "div")
         doc_to_clean = self.div_to_para(doc_to_clean, "span")
+        print("="*5+"after div to para"+"="*5)
+        print(etree.tostring(doc_to_clean).decode("utf-8"))
         return doc_to_clean
 
     def clean_body_classes(self, doc):
@@ -186,7 +193,8 @@ class DocumentCleaner:
                 replacement_text = []
                 nodes_to_return.append(kid)
             # node is a text node
-            elif self.parser.is_text_node(kid):
+            # elif self.parser.is_text_node(kid):
+            elif self.parser.is_text_node(kid) and self.parser.get_attribute(kid, "preserve") != "true":
                 kid_text_node = kid
                 kid_text = self.parser.get_text(kid)
                 replace_text = self.tablines_replacements.replace_all(kid_text)
@@ -344,7 +352,7 @@ class DocumentCleaner:
         """
         Convert code tags to p tags with original content
         """
-        code_elements = self.parser.get_elements_by_tag(doc, tag="code")
+        code_elements = self.parser.get_elements_by_tags(doc, tags=["pre", "code"])
         for code_elem in code_elements:
             code_content = self.parser.inner_html(code_elem)
             if code_content:
@@ -356,8 +364,10 @@ class DocumentCleaner:
                 self.parser.set_attribute(text_element, attr="gravityScore", value="1")
                 parent = self.parser.get_parent(code_elem)                
                 if parent is not None:
+                    print(etree.tostring(text_element))
                     parent.replace(code_elem, text_element)
-
+                print(f"code_content: {code_content}")
+        # remove all pre tags
         return doc
 
     def convert_table_node(self, doc):
