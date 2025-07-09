@@ -19,9 +19,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from lxml import etree
 from copy import deepcopy
-
 from goose3.extractors import BaseExtractor
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class ContentExtractor(BaseExtractor):
@@ -343,6 +346,9 @@ class ContentExtractor(BaseExtractor):
 
         target_node = self.article.top_node
         node = self.add_siblings(target_node)
+
+        logger.info("before post_cleanup:\n" + etree.tostring(node).decode("utf-8"))
+
         for elm in self.parser.get_children(node):
             e_tag = self.parser.get_tag(elm)
 
@@ -363,6 +369,9 @@ class ContentExtractor(BaseExtractor):
                     or not self.is_nodescore_threshold_met(node, elm)
                 ):
                     self.parser.remove(elm)
+
+        logger.info("after post_cleanup:\n" + etree.tostring(node).decode("utf-8"))
+
         return node
 
 

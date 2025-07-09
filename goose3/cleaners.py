@@ -23,6 +23,9 @@ from goose3.utils import ReplaceSequence
 from lxml import etree
 import re
 
+import logging
+logger = logging.getLogger(__name__)
+
 class DocumentCleaner:
     def __init__(self, config, article):
         # config
@@ -69,9 +72,11 @@ class DocumentCleaner:
 
         if self.config.preserve_img_elements:
             doc_to_clean = self.convert_img_node(doc_to_clean)
+
+        if self.config.preserve_table_elements:
+            doc_to_clean = self.convert_table_node(doc_to_clean)
         
-        print("="*5+"after convert code and img"+"="*5)
-        print(etree.tostring(doc_to_clean).decode("utf-8"))
+        logger.info("after convert nodes:\n" + etree.tostring(doc_to_clean).decode("utf-8"))
         doc_to_clean = self.clean_body_classes(doc_to_clean)
         doc_to_clean = self.clean_article_tags(doc_to_clean)
         doc_to_clean = self.clean_tags(doc_to_clean, ["em", "small"])
@@ -85,12 +90,10 @@ class DocumentCleaner:
         doc_to_clean = self.remove_nodes_regex(doc_to_clean, self.facebook_braodcasting_re)
         doc_to_clean = self.remove_nodes_regex(doc_to_clean, self.twitter_re)
         doc_to_clean = self.clean_para_spans(doc_to_clean)
-        print("="*5+"after clean para spans"+"="*5)
-        print(etree.tostring(doc_to_clean).decode("utf-8"))
+        logger.info("after clean para spans:\n" + etree.tostring(doc_to_clean).decode("utf-8"))
         doc_to_clean = self.div_to_para(doc_to_clean, "div")
         doc_to_clean = self.div_to_para(doc_to_clean, "span")
-        print("="*5+"after div to para"+"="*5)
-        print(etree.tostring(doc_to_clean).decode("utf-8"))
+        logger.info("after div to para:\n" + etree.tostring(doc_to_clean).decode("utf-8"))
         return doc_to_clean
 
     def clean_body_classes(self, doc):
@@ -379,10 +382,16 @@ class DocumentCleaner:
         table_elements = self.parser.get_elements_by_tag(doc, tag="table")
 
         for table_elem in table_elements:
-            table_content = self.parser.inner_html(table_elem)
+
+            import html2text
+            table_html = self.parser.node_to_string(table_elem)
+            table_content = html2text.html2text(table_html)
+            print(table_content)
+
             if table_content:
                 text_element = self.parser.create_element("text")
                 text_element.text = f'<table>{table_content}</table>'
+                text_element.tail = table_elem.tail
                 self.parser.set_attribute(text_element, attr="source", value="table")
                 self.parser.set_attribute(text_element, attr="preserve", value="true")
                 parent = self.parser.get_parent(table_elem)                
