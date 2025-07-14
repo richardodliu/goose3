@@ -369,9 +369,7 @@ class DocumentCleaner:
                 self.parser.set_attribute(text_element, attr="gravityScore", value="1")
                 parent = self.parser.get_parent(code_elem)                
                 if parent is not None:
-                    print(etree.tostring(text_element))
                     parent.replace(code_elem, text_element)
-                print(f"code_content: {code_content}")
         # remove all pre tags
         return doc
 
@@ -386,7 +384,6 @@ class DocumentCleaner:
             import html2text
             table_html = self.parser.node_to_string(table_elem)
             table_content = html2text.html2text(table_html)
-            print(table_content)
 
             if table_content:
                 text_element = self.parser.create_element("text")
