@@ -23,6 +23,7 @@ from lxml import etree
 from copy import deepcopy
 from goose3.extractors import BaseExtractor
 
+
 import logging
 logger = logging.getLogger(__name__)
 
