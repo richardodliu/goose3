@@ -25,6 +25,10 @@ from lxml import etree
 from goose3.text import inner_trim
 
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 class OutputFormatter:
     def __init__(self, config, article):
         # config
@@ -59,27 +63,21 @@ class OutputFormatter:
 
     def get_formatted_text(self):
         self.top_node = self.article.top_node
+        logger.info("before get_formatted_text:\n" + etree.tostring(self.top_node).decode("utf-8"))
         self.remove_negativescores_nodes()
-        print("="*5+"After remove_negativescores_nodes"+"="*5)
-        print(etree.tostring(self.top_node).decode("utf-8"))
+        logger.info("after remove_negativescores_nodes:\n" + etree.tostring(self.top_node).decode("utf-8"))
         self.links_to_text()
-        print("="*5+"After links_to_text"+"="*5)
-        print(etree.tostring(self.top_node).decode("utf-8"))
+        logger.info("after links_to_text:\n" + etree.tostring(self.top_node).decode("utf-8"))
         self.add_newline_to_br()
-        print("="*5+"After add_newline_to_br"+"="*5)
-        print(etree.tostring(self.top_node).decode("utf-8"))
+        logger.info("after add_newline_to_br:\n" + etree.tostring(self.top_node).decode("utf-8"))
         self.replace_with_text()
-        print("="*5+"After replace_with_text"+"="*5)
-        print(etree.tostring(self.top_node).decode("utf-8"))
+        logger.info("after replace_with_text:\n" + etree.tostring(self.top_node).decode("utf-8"))
         self.remove_fewwords_paragraphs()
-        print("="*5+"After remove_fewwords_paragraphs"+"="*5)
-        print(etree.tostring(self.top_node).decode("utf-8"))
+        logger.info("after remove_fewwords_paragraphs:\n" + etree.tostring(self.top_node).decode("utf-8"))
         self.make_list_elms_pretty()
-        print("="*5+"After make_list_elms_pretty"+"="*5)
-        print(etree.tostring(self.top_node).decode("utf-8"))
+        logger.info("after make_list_elms_pretty:\n" + etree.tostring(self.top_node).decode("utf-8"))
         text = self.convert_to_text()
-        print("="*5+"After convert_to_text"+"="*5)
-        print(text)
+        logger.info("after convert_to_text:\n" + text)
         return text
 
     def convert_to_text(self):
