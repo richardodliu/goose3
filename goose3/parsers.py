@@ -126,12 +126,11 @@ class Parser:
         base_selector = f"descendant-or-self::{sel}"
         
         if attr and value:
-            # 避免使用慢的XPath正则表达式，先获取所有元素再用Python re过滤
-            # 这比XPath的re:test()快得多
+            # 避免使用慢的XPath正则表达式，先获取所有元素再用Python re过滤, 比XPath的re:test()快得多
             elems = node.xpath(f'{base_selector}[@{attr}]')
             if elems:
                 # 预编译正则表达式，提高匹配效率
-                import re
+                # 可以使用googl的RE2
                 pattern = re.compile(value, re.IGNORECASE)
                 filtered_elems = []
                 for elem in elems:

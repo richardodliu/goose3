@@ -367,7 +367,7 @@ class DocumentCleaner:
 
         for table_elem in table_elements:
             table_html = self.parser.node_to_string(table_elem)
-            table_content = html2text(table_html)
+            table_content = html2text.html2text(table_html)
             if table_content:
                 text_element = self.parser.create_element("text")
                 text_element.text = f'<table>{table_content}</table>'
