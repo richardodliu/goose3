@@ -142,8 +142,7 @@ class DocumentCleaner:
         return doc
 
     def clean_bad_tags(self, doc):
-        # 使用新的高效方法，一次性查找所有匹配的元素
-        # 这比原来的3个单独的XPath查询快得多
+        # 使用find_elements_by_regex一次性查找所有匹配的元素
         naughty_elements = self.parser.find_elements_by_regex(doc, self.compiled_remove_nodes_re)
         for node in naughty_elements:
             self.parser.remove(node)
@@ -151,8 +150,7 @@ class DocumentCleaner:
         return doc
 
     def remove_nodes_regex(self, doc, pattern):
-        # 使用新的高效方法，一次性查找所有匹配的元素
-        # 避免多次XPath查询和正则表达式编译
+        # 使用find_elements_by_regex一次性查找所有匹配的元素
         naughty_elements = self.parser.find_elements_by_regex(doc, pattern)
         for node in naughty_elements:
             self.parser.remove(node)
