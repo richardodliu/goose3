@@ -32,8 +32,7 @@ from goose3.utils.constants import CAMEL_CASE_DEPRICATION
 
 class Parser:
     # 缓存正则表达式命名空间，避免重复创建
-    _REGEXP_NAMESPACE = "http://exslt.org/regular-expressions"
-    _REGEXP_NAMESPACES = {"re": _REGEXP_NAMESPACE}
+    _REGEXP_NAMESPACES = {"re": "http://exslt.org/regular-expressions"}
 
     @classmethod
     def xpath_re(cls, node, expression):
