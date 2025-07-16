@@ -19,6 +19,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import re
 from copy import deepcopy
 
 import lxml.html
@@ -30,11 +31,49 @@ from goose3.utils.constants import CAMEL_CASE_DEPRICATION
 
 
 class Parser:
+    # 缓存正则表达式命名空间，避免重复创建
+    _REGEXP_NAMESPACE = "http://exslt.org/regular-expressions"
+    _REGEXP_NAMESPACES = {"re": _REGEXP_NAMESPACE}
+
     @classmethod
     def xpath_re(cls, node, expression):
-        regexp_namespace = "http://exslt.org/regular-expressions"
-        items = node.xpath(expression, namespaces={"re": regexp_namespace})
+        # 直接使用缓存的namespaces字典，提高性能
+        items = node.xpath(expression, namespaces=cls._REGEXP_NAMESPACES)
         return items
+
+    @classmethod
+    def find_elements_by_regex(cls, node, pattern, flags=re.IGNORECASE):
+        """
+        高效的正则表达式元素查找方法
+        使用单次DOM遍历和预编译的正则表达式，比xpath_re快得多
+        """
+        if isinstance(pattern, str):
+            compiled_pattern = re.compile(pattern, flags)
+        else:
+            compiled_pattern = pattern
+
+        matching_elements = []
+
+        # 使用单次XPath查询获取所有具有id、class、name属性的元素
+        elements = node.xpath("//*[@id or @class or @name]")
+
+        for element in elements:
+            # 检查id属性
+            if element.get('id') and compiled_pattern.search(element.get('id')):
+                matching_elements.append(element)
+                continue
+
+            # 检查class属性
+            if element.get('class') and compiled_pattern.search(element.get('class')):
+                matching_elements.append(element)
+                continue
+
+            # 检查name属性
+            if element.get('name') and compiled_pattern.search(element.get('name')):
+                matching_elements.append(element)
+                continue
+
+        return matching_elements
 
     @classmethod
     def drop_tag(cls, nodes):
@@ -83,12 +122,12 @@ class Parser:
 
     @classmethod
     def get_elements_by_tag(cls, node, tag=None, attr=None, value=None, childs=False):
-        namespace = "http://exslt.org/regular-expressions"
+        # 使用缓存的命名空间，提高性能
         sel = tag or "*"
         selector = f"descendant-or-self::{sel}"
         if attr and value:
             selector = f'{selector}[re:test(@{attr}, "{value}", "i")]'
-        elems = node.xpath(selector, namespaces={"re": namespace})
+        elems = node.xpath(selector, namespaces=cls._REGEXP_NAMESPACES)
         # remove the root node
         # if we have a selection tag
         if node in elems and (tag or childs):

@@ -20,11 +20,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from goose3.utils import ReplaceSequence
-from lxml import etree
 import re
 
-import logging
-logger = logging.getLogger(__name__)
 
 class DocumentCleaner:
     def __init__(self, config, article):
@@ -52,6 +49,8 @@ class DocumentCleaner:
             "|konafilter|KonaFilter|breadcrumbs|^fn$|wp-caption-text"
             "|legende|ajoutVideo|timestamp|js_replies|disclaim"
         )
+        # 预编译正则表达式，提高性能
+        self.compiled_remove_nodes_re = re.compile(self.remove_nodes_re, re.IGNORECASE)
         self.regexp_namespace = "http://exslt.org/regular-expressions"
         self.nauthy_ids_re = f"//*[re:test(@id, '{self.remove_nodes_re}', 'i')]"
         self.nauthy_classes_re = f"//*[re:test(@class, '{self.remove_nodes_re}', 'i')]"
@@ -75,8 +74,6 @@ class DocumentCleaner:
 
         if self.config.preserve_table_elements:
             doc_to_clean = self.convert_table_node(doc_to_clean)
-        
-        logger.info("after convert nodes:\n" + etree.tostring(doc_to_clean).decode("utf-8"))
         doc_to_clean = self.clean_body_classes(doc_to_clean)
         doc_to_clean = self.clean_article_tags(doc_to_clean)
         doc_to_clean = self.clean_tags(doc_to_clean, ["em", "small"])
@@ -90,10 +87,8 @@ class DocumentCleaner:
         doc_to_clean = self.remove_nodes_regex(doc_to_clean, self.facebook_braodcasting_re)
         doc_to_clean = self.remove_nodes_regex(doc_to_clean, self.twitter_re)
         doc_to_clean = self.clean_para_spans(doc_to_clean)
-        logger.info("after clean para spans:\n" + etree.tostring(doc_to_clean).decode("utf-8"))
         doc_to_clean = self.div_to_para(doc_to_clean, "div")
         doc_to_clean = self.div_to_para(doc_to_clean, "span")
-        logger.info("after div to para:\n" + etree.tostring(doc_to_clean).decode("utf-8"))
         return doc_to_clean
 
     def clean_body_classes(self, doc):
@@ -147,29 +142,20 @@ class DocumentCleaner:
         return doc
 
     def clean_bad_tags(self, doc):
-        # ids
-        naughty_list = self.parser.xpath_re(doc, self.nauthy_ids_re)
-        for node in naughty_list:
-            self.parser.remove(node)
-
-        # class
-        naughty_classes = self.parser.xpath_re(doc, self.nauthy_classes_re)
-        for node in naughty_classes:
-            self.parser.remove(node)
-
-        # name
-        naughty_names = self.parser.xpath_re(doc, self.nauthy_names_re)
-        for node in naughty_names:
+        # 使用新的高效方法，一次性查找所有匹配的元素
+        # 这比原来的3个单独的XPath查询快得多
+        naughty_elements = self.parser.find_elements_by_regex(doc, self.compiled_remove_nodes_re)
+        for node in naughty_elements:
             self.parser.remove(node)
 
         return doc
 
     def remove_nodes_regex(self, doc, pattern):
-        for selector in ["id", "class"]:
-            reg = f"//*[re:test(@{selector}, '{pattern}', 'i')]"
-            naughty_list = self.parser.xpath_re(doc, reg)
-            for node in naughty_list:
-                self.parser.remove(node)
+        # 使用新的高效方法，一次性查找所有匹配的元素
+        # 避免多次XPath查询和正则表达式编译
+        naughty_elements = self.parser.find_elements_by_regex(doc, pattern)
+        for node in naughty_elements:
+            self.parser.remove(node)
         return doc
 
     def clean_para_spans(self, doc):
@@ -380,11 +366,7 @@ class DocumentCleaner:
         table_elements = self.parser.get_elements_by_tag(doc, tag="table")
 
         for table_elem in table_elements:
-
-            import html2text
-            table_html = self.parser.node_to_string(table_elem)
-            table_content = html2text.html2text(table_html)
-
+            table_content = self.parser.inner_html(table_elem)
             if table_content:
                 text_element = self.parser.create_element("text")
                 text_element.text = f'<table>{table_content}</table>'
