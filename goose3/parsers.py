@@ -121,16 +121,32 @@ class Parser:
 
     @classmethod
     def get_elements_by_tag(cls, node, tag=None, attr=None, value=None, childs=False):
-        # 使用缓存的命名空间，提高性能
+        # 缓存常用的选择器，避免重复构建字符串
         sel = tag or "*"
-        selector = f"descendant-or-self::{sel}"
+        base_selector = f"descendant-or-self::{sel}"
+        
         if attr and value:
-            selector = f'{selector}[re:test(@{attr}, "{value}", "i")]'
-        elems = node.xpath(selector, namespaces=cls._REGEXP_NAMESPACES)
-        # remove the root node
-        # if we have a selection tag
+            # 避免使用慢的XPath正则表达式，先获取所有元素再用Python re过滤
+            # 这比XPath的re:test()快得多
+            elems = node.xpath(f'{base_selector}[@{attr}]')
+            if elems:
+                # 预编译正则表达式，提高匹配效率
+                import re
+                pattern = re.compile(value, re.IGNORECASE)
+                filtered_elems = []
+                for elem in elems:
+                    attr_value = elem.get(attr)
+                    if attr_value and pattern.search(attr_value):
+                        filtered_elems.append(elem)
+                elems = filtered_elems
+        else:
+            # 对于简单查询，直接使用XPath（不涉及正则表达式）
+            elems = node.xpath(base_selector)
+        
+        # 优化根节点移除操作：使用列表推导式比remove()更快
         if node in elems and (tag or childs):
-            elems.remove(node)
+            elems = [elem for elem in elems if elem is not node]
+        
         return elems
 
     @classmethod

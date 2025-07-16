@@ -19,9 +19,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from goose3.utils import ReplaceSequence
+
 import re
 
+from html2text import html2text
+from goose3.utils import ReplaceSequence
 
 class DocumentCleaner:
     def __init__(self, config, article):
@@ -364,7 +366,8 @@ class DocumentCleaner:
         table_elements = self.parser.get_elements_by_tag(doc, tag="table")
 
         for table_elem in table_elements:
-            table_content = self.parser.inner_html(table_elem)
+            table_html = self.parser.node_to_string(table_elem)
+            table_content = html2text(table_html)
             if table_content:
                 text_element = self.parser.create_element("text")
                 text_element.text = f'<table>{table_content}</table>'
